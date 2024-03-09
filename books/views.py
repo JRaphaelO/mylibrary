@@ -2,15 +2,26 @@ import requests
 from rest_framework import status, views
 from rest_framework.response import Response
 
-from books.models import Book
-from books.serializers import BookSerializer
+from books.models import Book, BookData
+from books.serializers import BookSerializer, BooksDataSerializer
 
 # Create your views here.
 class BookListView(views.APIView):
     def get(self, request, *args, **kwargs):
         books = Book.objects.all()
         serializer = BookSerializer(books, many=True)
-        return Response(serializer.data)
+
+        booksData = BookData.objects.filter(book__in=books)
+
+        data = []
+        for book in serializer.data:
+            bookData = booksData.filter(book=book['id']).all()
+            data.append({
+                **book,
+                'bookData': BooksDataSerializer(bookData).data
+            })
+
+        return Response(data)
     
     def post(self, request, *args, **kwargs):
         serializer = BookSerializer(data=request.data)
@@ -21,12 +32,17 @@ class BookListView(views.APIView):
             data = response.json()
             
             for item in data['items']:
-                book = Book(
+                bookData = BookData(
+                    book=serializer.instance,
                     title=item['volumeInfo']['title'],
                     author=item['volumeInfo']['authors'][0],
-                    year_published=item['volumeInfo']['publishedDate']
+                    publisher=item['volumeInfo']['publisher'],
+                    description=item['volumeInfo']['description'],
+                    info_link=item['volumeInfo']['infoLink'],
+                    image_link=item['volumeInfo']['imageLinks']['thumbnail']
                 )
-                book.save()
+
+                bookData.save()
 
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
