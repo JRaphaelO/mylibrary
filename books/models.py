@@ -11,3 +11,14 @@ class Book(models.Model):
     def __str__(self):
         return self.title
 
+class BookData(models.Model):
+    book = models.ForeignKey(Book, on_delete=models.CASCADE)
+    title = models.CharField(max_length=200)
+    author = models.CharField(max_length=200)
+    publisher = models.CharField(max_length=200)
+    description = models.TextField()
+    info_link = models.URLField()
+    image_link = models.URLField()
+
+    def __str__(self):
+        return self.title
